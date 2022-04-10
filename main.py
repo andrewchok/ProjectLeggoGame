@@ -189,7 +189,8 @@ async def on_message(message):
         return
 
     if CheckCmd(messageContent, 'highscore'):
-        await message.channel.send(str(GetHighscore(authorId))
+        await message.channel.send(dbutils.MentionAuthor(author) + ' your highscore is: ' + str(dbutils.GetHighscore(authorId)))
+        return
                                    
     # test cmd area
     if hasAuthority and CheckCmd(messageContent, 'test'):
