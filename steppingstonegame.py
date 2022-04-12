@@ -10,6 +10,7 @@ class StepMessage(enum.Enum):
     Success = 0
     Fail = 1
     Fell = 2
+    Win = 3
 
 
 # game settings
@@ -21,6 +22,15 @@ gameName = 'SteppingStoneGame'
 
 
 # Game functions
+def IsGameRunning():
+    return bIsGameRunning 
+
+
+def SetIsGameRunning(running):
+    global bIsGameRunning
+    bIsGameRunning = running
+
+
 def GetCurrentStep(playerinfo):
     return db[playerinfo]['current_step']
 
@@ -28,7 +38,7 @@ def GetCurrentStep(playerinfo):
 def CheckGame():
     bIsInDatabase = gameName in db.keys()
     bIsGameStatusInDatabse = 'GameStatus' in db.keys()
-    return bIsGameRunning and bIsInDatabase and bIsGameStatusInDatabse
+    return IsGameRunning() and bIsInDatabase and bIsGameStatusInDatabse
 
 
 def AddToGameStatus(player):
@@ -63,18 +73,12 @@ def EndGame():
     # if there is a game, delete previous game
     if CheckGame():
         del db[gameName]
-        bIsGameRunning = False
+        SetIsGameRunning(False)
         return True
     return False
 
 
 def StartGame():
-    # Flag game is being setup
-    bIsGameRunning = False
-
-    # end previous game
-    EndGame()
-
     # create this to hold info
     db['GameStatus'] = ['ready']
 
@@ -104,8 +108,6 @@ def StartGame():
             # reset players to current step to play
             db[player]['current_step'] = 0
 
-    bIsGameRunning = True
-
 
 def StepLeft(authorId):
     steps = db[gameName]
@@ -123,6 +125,9 @@ def StepLeft(authorId):
         if authorId in steps[currentStep - 1]:
             steps[currentStep - 1].remove(authorId)
 
+    if currentStep >= maxSteps:
+        return StepMessage.Win
+
     if steps[currentStep][0] == 'left':
         # add instance of player to current step
         db[gameName][currentStep].append(authorId)
@@ -130,6 +135,9 @@ def StepLeft(authorId):
 
         if playerInfo['current_step'] > playerInfo['highscore']:
             playerInfo['highscore'] = playerInfo['current_step']
+
+        if currentStep >= maxSteps:
+            return StepMessage.Win
 
         return StepMessage.Success
 
@@ -154,6 +162,9 @@ def StepRight(authorId):
         if authorId in steps[currentStep - 1]:
             steps[currentStep - 1].remove(authorId)
 
+    if currentStep >= maxSteps:
+        return StepMessage.Win
+
     if steps[currentStep][0] == 'right':
         # add instance of player to current step
         db[gameName][currentStep].append(authorId)
@@ -161,6 +172,9 @@ def StepRight(authorId):
 
         if playerInfo['current_step'] > playerInfo['highscore']:
             playerInfo['highscore'] = playerInfo['current_step']
+
+        if currentStep >= maxSteps:
+            return StepMessage.Win
 
         return StepMessage.Success
 
