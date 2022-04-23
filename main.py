@@ -11,7 +11,7 @@ adminId = os.environ['AdminId']
 cmdPrefix = '$'
 startGameTime = datetime.datetime.now()
 endGameTime = datetime.datetime.now()
-gameCooldown = datetime.timedelta(minutes=5)
+gameCooldown = datetime.timedelta(minutes=15)
 
 
 # Util functions
