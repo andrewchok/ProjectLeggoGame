@@ -135,13 +135,36 @@ async def on_message(message):
             for data in db.keys():
                 if 'highscore_current' in data.keys():
                     db[data]['highscore_current'] = 0
+            return
+        
+        if CheckCmd(messageContent, 'force_startgame'):
+            if steppingstonegame.CheckGame():
+                await message.channel.send(
+                    'Game running! End game before creating a new one')
+            else:
+                await message.channel.send('Creating game...')
+                steppingstonegame.bIsGameRunning = False
 
+                steppingstonegame.StartGame()
+                print(db['SteppingStoneGame'])
+
+                await message.channel.send('Game Created!')
+                steppingstonegame.bIsGameRunning = True
+
+                startGameTime = datetime.datetime.now() + gameCooldown
+                db['GameInfo']['StartGameTime'] = str(startGameTime)
+            return
+              
         if CheckCmd(messageContent, 'force_endgame'):
             if steppingstonegame.EndGame():
                 await message.channel.send('Game Ended!')
                 await steppingstonegame.ShowResult(message)
+              
+                startGameTime = currentTime
+                db['GameInfo']['StartGameTime'] = str(startGameTime)
             else:
                 await message.channel.send('No Game Found!')
+            return
 
     if CheckCmd(messageContent, 'startgame'):
         if currentTime >= startGameTime:
@@ -158,8 +181,8 @@ async def on_message(message):
                 await message.channel.send('Game Created!')
                 steppingstonegame.bIsGameRunning = True
 
-                db['GameInfo']['StartGameTime'] = str(datetime.datetime.now() +
-                                                      gameCooldown)
+                startGameTime = datetime.datetime.now() + gameCooldown
+                db['GameInfo']['StartGameTime'] = str(startGameTime)
         else:
             elapsedTime = startGameTime - currentTime
             await message.channel.send(
@@ -173,6 +196,9 @@ async def on_message(message):
             if steppingstonegame.EndGame():
                 await message.channel.send('Game Ended!')
                 await steppingstonegame.ShowResult(message)
+              
+                startGameTime = currentTime
+                db['GameInfo']['StartGameTime'] = str(startGameTime)
             else:
                 await message.channel.send('No Game Found!')
         else:
@@ -231,10 +257,10 @@ async def on_message(message):
 
     if CheckCmd(messageContent, 'highscore'):
         await message.channel.send(
-            dbutils.MentionAuthor(author) + ' your current highscore is: ' +
+            dbutils.MentionAuthor(author) + ' your current highscore is: **' +
             str(dbutils.GetHighscoreCurrent(authorId)) +
-            ', your lifetime highscore is: ' +
-            str(dbutils.GetHighscoreLifetime(authorId)))
+            '**, your lifetime highscore is: **' +
+            str(dbutils.GetHighscoreLifetime(authorId)) + '**')
         return
 
     # test cmd area
