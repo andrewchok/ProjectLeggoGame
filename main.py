@@ -5,7 +5,7 @@ import dbutils
 import steppingstonegame
 from replit import db
 
-DEBUG_MODE = True
+DEBUG_MODE = False
 client = discord.Client()
 botToken = os.environ['TOKEN']
 adminId = os.environ['AdminId']
@@ -88,7 +88,16 @@ async def on_message(message):
             dbutils.MentionAuthor(author) +
             ' please use **$register** to register')
         return
-
+    
+    if CheckCmd(messageContent, 'update'):
+        if dbutils.UpdateRegister(author):
+            await message.channel.send(
+                dbutils.MentionAuthor(author) + ' updated!')
+        else:
+            await message.channel.send(
+                dbutils.MentionAuthor(author) + ' you are up-to-date!')
+        return
+      
     if not dbutils.CheckVersion(db[authorId]['version']):
         await message.channel.send(
             dbutils.MentionAuthor(author) +
@@ -207,15 +216,6 @@ async def on_message(message):
                 'Game in session for: ' +
                 str(int((elapsedTime.seconds % 3600) / 60)) + ' min ' +
                 str(elapsedTime.seconds % 60) + ' sec')
-        return
-
-    if CheckCmd(messageContent, 'update'):
-        if dbutils.UpdateRegister(author):
-            await message.channel.send(
-                dbutils.MentionAuthor(author) + ' updated!')
-        else:
-            await message.channel.send(
-                dbutils.MentionAuthor(author) + ' you are up-to-date!')
         return
 
     if CheckCmd(messageContent, 'left') or CheckCmd(messageContent, 'right'):
