@@ -5,13 +5,14 @@ import dbutils
 import steppingstonegame
 from replit import db
 
+DEBUG_MODE = True
 client = discord.Client()
 botToken = os.environ['TOKEN']
 adminId = os.environ['AdminId']
 cmdPrefix = '$'
 startGameTime = datetime.datetime.now()
 endGameTime = datetime.datetime.now()
-gameCooldown = datetime.timedelta(minutes=15)
+gameCooldown = datetime.timedelta(minutes=steppingstonegame.gameTime)
 
 
 # Util functions
@@ -22,15 +23,24 @@ def CheckCmd(messageContent, cmd):
 # shows when the bot has logged into the server and is ready
 @client.event
 async def on_ready():
-    if 'SteppingStoneGame' in db.keys():
-        steppingstonegame.bIsGameRunning = True
-        steppingstonegame.EndGame()
+    # current GameInfo version = 0.1
+    print(db['GameInfo'])
+    if 'GameInfo' not in db.keys():
+        print(db.keys())
+        db['GameInfo'] = {
+            'version': 0.1,
+            'StartGameTime': str(datetime.datetime.now()),
+            'EndGameTime': str(datetime.datetime.now())
+        }
+        print(db['GameInfo'])
 
     global startGameTime
-    startGameTime = datetime.datetime.now()
+    startGameTime = datetime.datetime.strptime(db['GameInfo']['StartGameTime'],
+                                               '%Y-%m-%d %H:%M:%S.%f')
 
     global endGameTime
-    endGameTime = datetime.datetime.now()
+    endGameTime = datetime.datetime.strptime(db['GameInfo']['EndGameTime'],
+                                             '%Y-%m-%d %H:%M:%S.%f')
 
     print('We have logged in as {0.user}'.format(client))
 
@@ -57,6 +67,11 @@ async def on_message(message):
     messageContent = message.content.lower()
     hasAuthority = authorId == adminId
 
+    # if in debug mode, do not allow anyone else other than admin to use
+    if DEBUG_MODE:
+        if not hasAuthority:
+            return
+
     # register a user to the db
     if CheckCmd(messageContent, 'register'):
         if authorId not in db.keys():
@@ -71,7 +86,13 @@ async def on_message(message):
     if authorId not in db.keys():
         await message.channel.send(
             dbutils.MentionAuthor(author) +
-            ' please use type **$register** to register')
+            ' please use **$register** to register')
+        return
+
+    if not dbutils.CheckVersion(db[authorId]['version']):
+        await message.channel.send(
+            dbutils.MentionAuthor(author) +
+            ' please use **$update** to update your profile')
         return
 
     if hasAuthority:
@@ -110,6 +131,18 @@ async def on_message(message):
                 del db[data]
             return
 
+        if CheckCmd(messageContent, 'current_highscore_reset'):
+            for data in db.keys():
+                if 'highscore_current' in data.keys():
+                    db[data]['highscore_current'] = 0
+
+        if CheckCmd(messageContent, 'force_endgame'):
+            if steppingstonegame.EndGame():
+                await message.channel.send('Game Ended!')
+                await steppingstonegame.ShowResult(message)
+            else:
+                await message.channel.send('No Game Found!')
+
     if CheckCmd(messageContent, 'startgame'):
         if currentTime >= startGameTime:
             if steppingstonegame.CheckGame():
@@ -125,26 +158,29 @@ async def on_message(message):
                 await message.channel.send('Game Created!')
                 steppingstonegame.bIsGameRunning = True
 
-                startGameTime = datetime.datetime.now() + gameCooldown
+                db['GameInfo']['StartGameTime'] = str(datetime.datetime.now() +
+                                                      gameCooldown)
         else:
             elapsedTime = startGameTime - currentTime
-            await message.channel.send('Game in session for: ' +
-                                       str(int((elapsedTime.seconds % 3600) / 60)) + ' min ' +
-                                       str(elapsedTime.seconds % 60) + ' sec')
+            await message.channel.send(
+                'Game in session for: ' +
+                str(int((elapsedTime.seconds % 3600) / 60)) + ' min ' +
+                str(elapsedTime.seconds % 60) + ' sec')
         return
 
     if CheckCmd(messageContent, 'endgame'):
         if currentTime >= startGameTime:
-          if steppingstonegame.EndGame():
-              await message.channel.send('Game Ended!')
-              await steppingstonegame.ShowResult(message)
-          else:
-              await message.channel.send('No Game Found!')
+            if steppingstonegame.EndGame():
+                await message.channel.send('Game Ended!')
+                await steppingstonegame.ShowResult(message)
+            else:
+                await message.channel.send('No Game Found!')
         else:
-            elapsedTime = startGameTime - currentTime            
-            await message.channel.send('Game in session for: ' +
-                                       str(int((elapsedTime.seconds % 3600) / 60)) + ' min ' +
-                                       str(elapsedTime.seconds % 60) + ' sec')
+            elapsedTime = startGameTime - currentTime
+            await message.channel.send(
+                'Game in session for: ' +
+                str(int((elapsedTime.seconds % 3600) / 60)) + ' min ' +
+                str(elapsedTime.seconds % 60) + ' sec')
         return
 
     if CheckCmd(messageContent, 'update'):
@@ -160,9 +196,9 @@ async def on_message(message):
         if steppingstonegame.CheckGame():
             if db[authorId]['is_alive']:
                 if CheckCmd(messageContent, 'left'):
-                    result = steppingstonegame.StepLeft(authorId)
+                    result = steppingstonegame.Step(authorId, False)
                 else:
-                    result = steppingstonegame.StepRight(authorId)
+                    result = steppingstonegame.Step(authorId, True)
 
                 if result == steppingstonegame.StepMessage.Success:
                     await message.channel.send(
@@ -195,8 +231,10 @@ async def on_message(message):
 
     if CheckCmd(messageContent, 'highscore'):
         await message.channel.send(
-            dbutils.MentionAuthor(author) + ' your highscore is: ' +
-            str(dbutils.GetHighscore(authorId)))
+            dbutils.MentionAuthor(author) + ' your current highscore is: ' +
+            str(dbutils.GetHighscoreCurrent(authorId)) +
+            ', your lifetime highscore is: ' +
+            str(dbutils.GetHighscoreLifetime(authorId)))
         return
 
     # test cmd area

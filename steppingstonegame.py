@@ -79,7 +79,7 @@ def EndGame():
 
 
 def StartGame():
-    # create this to hold info
+    # create this to hold player info
     db['GameStatus'] = ['ready']
 
     # get new random seed
@@ -109,7 +109,7 @@ def StartGame():
             db[player]['current_step'] = 0
 
 
-def StepLeft(authorId):
+def Step(authorId, bIsRight):
     steps = db[gameName]
     playerInfo = db[authorId]
     currentStep = playerInfo['current_step']
@@ -128,13 +128,18 @@ def StepLeft(authorId):
     if currentStep >= maxSteps:
         return StepMessage.Win
 
-    if steps[currentStep][0] == 'left':
+    if (steps[currentStep][0] == 'left' and not bIsRight) or (steps[currentStep][0] == 'right' and bIsRight):
         # add instance of player to current step
         db[gameName][currentStep].append(authorId)
         playerInfo['current_step'] += 1
 
-        if playerInfo['current_step'] > playerInfo['highscore']:
-            playerInfo['highscore'] = playerInfo['current_step']
+        # update current highscore
+        if playerInfo['current_step'] > playerInfo['highscore_current']:
+            playerInfo['highscore_current'] = playerInfo['current_step']
+
+        # update lifetime highscore
+        if playerInfo['highscore_current'] > playerInfo['highscore_lifetime']:
+            playerInfo['highscore_lifetime'] = playerInfo['highscore_current'] 
 
         if currentStep >= maxSteps:
             return StepMessage.Win
@@ -145,39 +150,3 @@ def StepLeft(authorId):
         db[authorId]['is_alive'] = False
         return StepMessage.Fell
 
-
-def StepRight(authorId):
-    steps = db[gameName]
-    playerInfo = db[authorId]
-    currentStep = playerInfo['current_step']
-
-    AddToGameStatus(authorId)
-
-    # check if step can hold player
-    if len(steps[currentStep]) > (maxPlayersOnStep):
-        return StepMessage.Fail
-
-    # remove instance of player from previous step
-    if not ((currentStep - 1) < 0):
-        if authorId in steps[currentStep - 1]:
-            steps[currentStep - 1].remove(authorId)
-
-    if currentStep >= maxSteps:
-        return StepMessage.Win
-
-    if steps[currentStep][0] == 'right':
-        # add instance of player to current step
-        db[gameName][currentStep].append(authorId)
-        playerInfo['current_step'] += 1
-
-        if playerInfo['current_step'] > playerInfo['highscore']:
-            playerInfo['highscore'] = playerInfo['current_step']
-
-        if currentStep >= maxSteps:
-            return StepMessage.Win
-
-        return StepMessage.Success
-
-    else:
-        db[authorId]['is_alive'] = False
-        return StepMessage.Fell
