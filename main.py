@@ -13,6 +13,7 @@ cmdPrefix = '$'
 startGameTime = datetime.datetime.now()
 endGameTime = datetime.datetime.now()
 gameCooldown = datetime.timedelta(minutes=steppingstonegame.gameTime)
+DateTimeAdjust = datetime.timedelta(hours=4)
 
 
 # Util functions
@@ -20,19 +21,26 @@ def CheckCmd(messageContent, cmd):
     return messageContent.startswith(cmdPrefix + cmd)
 
 
+def PrintLog(log):
+    logtime = datetime.datetime.now() - DateTimeAdjust
+    print('[' + logtime.strftime("%Y-%m-%d %H:%M:%S") + ']: ')
+    print(log)
+
+
 # shows when the bot has logged into the server and is ready
 @client.event
 async def on_ready():
-    # current GameInfo version = 0.1
-    print(db['GameInfo'])
-    if 'GameInfo' not in db.keys():
-        print(db.keys())
+    # current GameInfo version = 0.2, added bIsGameRunning
+    PrintLog(db['GameInfo'])
+    if db['GameInfo']['version'] < 0.2:
+        PrintLog(db.keys())
         db['GameInfo'] = {
-            'version': 0.1,
+            'version': 0.2,
             'StartGameTime': str(datetime.datetime.now()),
-            'EndGameTime': str(datetime.datetime.now())
+            'EndGameTime': str(datetime.datetime.now()),
+            'bIsGameRunning': False
         }
-        print(db['GameInfo'])
+        PrintLog(db['GameInfo'])
 
     global startGameTime
     startGameTime = datetime.datetime.strptime(db['GameInfo']['StartGameTime'],
@@ -42,7 +50,7 @@ async def on_ready():
     endGameTime = datetime.datetime.strptime(db['GameInfo']['EndGameTime'],
                                              '%Y-%m-%d %H:%M:%S.%f')
 
-    print('We have logged in as {0.user}'.format(client))
+    PrintLog('We have logged in as {0.user}'.format(client))
 
 
 # reads a message sent
@@ -78,8 +86,10 @@ async def on_message(message):
             dbutils.InitRegister(authorId, authorName)
             await message.channel.send('Registered: ' + authorName +
                                        ' into the database!')
+            PrintLog('Registered: ' + authorName + ' into the database!')
         else:
             await message.channel.send(authorName + ' already registered!')
+            PrintLog(authorName + ' already registered!')
         return
 
     # check if registered before check other cmds
@@ -87,19 +97,27 @@ async def on_message(message):
         await message.channel.send(
             dbutils.MentionAuthor(author) +
             ' please use **$register** to register')
+        PrintLog(
+            dbutils.MentionAuthor(author) +
+            ' please use **$register** to register')
         return
-    
+
     if CheckCmd(messageContent, 'update'):
         if dbutils.UpdateRegister(author):
             await message.channel.send(
                 dbutils.MentionAuthor(author) + ' updated!')
+            PrintLog(dbutils.MentionAuthor(author) + ' updated!')
         else:
             await message.channel.send(
                 dbutils.MentionAuthor(author) + ' you are up-to-date!')
+            PrintLog(dbutils.MentionAuthor(author) + ' you are up-to-date!')
         return
-      
+
     if not dbutils.CheckVersion(db[authorId]['version']):
         await message.channel.send(
+            dbutils.MentionAuthor(author) +
+            ' please use **$update** to update your profile')
+        PrintLog(
             dbutils.MentionAuthor(author) +
             ' please use **$update** to update your profile')
         return
@@ -120,15 +138,19 @@ async def on_message(message):
                 dbutils.InitRegister(authorId, authorName)
                 await message.channel.send('Reset: ' + authorName +
                                            ' into the database!')
+                PrintLog('Reset: ' + authorName + ' into the database!')
             else:
                 await message.channel.send(authorName + ' not registered yet!')
+                PrintLog(authorName + ' not registered yet!')
             return
 
         if CheckCmd(messageContent, 'showgame'):
             if steppingstonegame.CheckGame():
                 await message.channel.send(db['SteppingStoneGame'])
+                PrintLog(db['SteppingStoneGame'])
             else:
                 await message.channel.send('No Game Found!')
+                PrintLog('No Game Found!')
             return
 
         if CheckCmd(messageContent, 'showstatus'):
@@ -145,34 +167,39 @@ async def on_message(message):
                 if 'highscore_current' in data.keys():
                     db[data]['highscore_current'] = 0
             return
-        
+
         if CheckCmd(messageContent, 'force_startgame'):
             if steppingstonegame.CheckGame():
                 await message.channel.send(
                     'Game running! End game before creating a new one')
+                PrintLog('Game running! End game before creating a new one')
             else:
                 await message.channel.send('Creating game...')
-                steppingstonegame.bIsGameRunning = False
+                PrintLog('Creating game...')
+                steppingstonegame.SetIsGameRunning(False)
 
                 steppingstonegame.StartGame()
-                print(db['SteppingStoneGame'])
+                PrintLog(db['SteppingStoneGame'])
 
                 await message.channel.send('Game Created!')
-                steppingstonegame.bIsGameRunning = True
+                PrintLog('Game Created!')
+                steppingstonegame.SetIsGameRunning(True)
 
                 startGameTime = datetime.datetime.now() + gameCooldown
                 db['GameInfo']['StartGameTime'] = str(startGameTime)
             return
-              
+
         if CheckCmd(messageContent, 'force_endgame'):
             if steppingstonegame.EndGame():
                 await message.channel.send('Game Ended!')
+                PrintLog('Game Ended!')
                 await steppingstonegame.ShowResult(message)
-              
+
                 startGameTime = currentTime
                 db['GameInfo']['StartGameTime'] = str(startGameTime)
             else:
                 await message.channel.send('No Game Found!')
+                PrintLog('No Game Found!')
             return
 
     if CheckCmd(messageContent, 'startgame'):
@@ -180,15 +207,18 @@ async def on_message(message):
             if steppingstonegame.CheckGame():
                 await message.channel.send(
                     'Game running! End game before creating a new one')
+                PrintLog('Game running! End game before creating a new one')
             else:
                 await message.channel.send('Creating game...')
-                steppingstonegame.bIsGameRunning = False
+                PrintLog('Creating game...')
+                steppingstonegame.SetIsGameRunning(False)
 
                 steppingstonegame.StartGame()
-                print(db['SteppingStoneGame'])
+                PrintLog(db['SteppingStoneGame'])
 
                 await message.channel.send('Game Created!')
-                steppingstonegame.bIsGameRunning = True
+                PrintLog('Game Created!')
+                steppingstonegame.SetIsGameRunning(True)
 
                 startGameTime = datetime.datetime.now() + gameCooldown
                 db['GameInfo']['StartGameTime'] = str(startGameTime)
@@ -198,24 +228,32 @@ async def on_message(message):
                 'Game in session for: ' +
                 str(int((elapsedTime.seconds % 3600) / 60)) + ' min ' +
                 str(elapsedTime.seconds % 60) + ' sec')
+            PrintLog('Game in session for: ' +
+                     str(int((elapsedTime.seconds % 3600) / 60)) + ' min ' +
+                     str(elapsedTime.seconds % 60) + ' sec')
         return
 
     if CheckCmd(messageContent, 'endgame'):
         if currentTime >= startGameTime:
             if steppingstonegame.EndGame():
                 await message.channel.send('Game Ended!')
+                PrintLog('Game Ended!')
                 await steppingstonegame.ShowResult(message)
-              
+
                 startGameTime = currentTime
                 db['GameInfo']['StartGameTime'] = str(startGameTime)
             else:
                 await message.channel.send('No Game Found!')
+                PrintLog('No Game Found!')
         else:
             elapsedTime = startGameTime - currentTime
             await message.channel.send(
                 'Game in session for: ' +
                 str(int((elapsedTime.seconds % 3600) / 60)) + ' min ' +
                 str(elapsedTime.seconds % 60) + ' sec')
+            PrintLog('Game in session for: ' +
+                     str(int((elapsedTime.seconds % 3600) / 60)) + ' min ' +
+                     str(elapsedTime.seconds % 60) + ' sec')
         return
 
     if CheckCmd(messageContent, 'left') or CheckCmd(messageContent, 'right'):
@@ -228,6 +266,9 @@ async def on_message(message):
 
                 if result == steppingstonegame.StepMessage.Success:
                     await message.channel.send(
+                        dbutils.MentionAuthor(author) + ' moved to step ' +
+                        str(db[authorId]['current_step']) + '!')
+                    PrintLog(
                         dbutils.MentionAuthor(author) + ' moved to step ' +
                         str(db[authorId]['current_step']) + '!')
                 elif result == steppingstonegame.StepMessage.Fail:
@@ -243,20 +284,34 @@ async def on_message(message):
                         dbutils.MentionAuthor(author) +
                         ' not enough space to go there. Occupied by ' +
                         occupyingPlayers)
+                    PrintLog(
+                        dbutils.MentionAuthor(author) +
+                        ' not enough space to go there. Occupied by ' +
+                        occupyingPlayers)
                 elif result == steppingstonegame.StepMessage.Fell:
                     await message.channel.send(
                         dbutils.MentionAuthor(author) + ' you fell!')
+                    PrintLog(dbutils.MentionAuthor(author) + ' you fell!')
                 else:
                     await message.channel.send(
                         dbutils.MentionAuthor(author) + ' INVALID!')
+                    PrintLog(dbutils.MentionAuthor(author) + ' INVALID!')
             else:
                 await message.channel.send(
+                    dbutils.MentionAuthor(author) +
+                    ' you are no longer in the game!')
+                PrintLog(
                     dbutils.MentionAuthor(author) +
                     ' you are no longer in the game!')
         return
 
     if CheckCmd(messageContent, 'highscore'):
         await message.channel.send(
+            dbutils.MentionAuthor(author) + ' your current highscore is: **' +
+            str(dbutils.GetHighscoreCurrent(authorId)) +
+            '**, your lifetime highscore is: **' +
+            str(dbutils.GetHighscoreLifetime(authorId)) + '**')
+        PrintLog(
             dbutils.MentionAuthor(author) + ' your current highscore is: **' +
             str(dbutils.GetHighscoreCurrent(authorId)) +
             '**, your lifetime highscore is: **' +

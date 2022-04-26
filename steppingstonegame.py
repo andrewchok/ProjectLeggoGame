@@ -14,7 +14,6 @@ class StepMessage(enum.Enum):
 
 
 # game settings
-bIsGameRunning = False
 maxSteps = 32
 maxPlayersOnStep = 2
 gameTime = 15
@@ -23,12 +22,11 @@ gameName = 'SteppingStoneGame'
 
 # Game functions
 def IsGameRunning():
-    return bIsGameRunning 
+    return db['GameInfo']['bIsGameRunning'] 
 
 
 def SetIsGameRunning(running):
-    global bIsGameRunning
-    bIsGameRunning = running
+    db['GameInfo']['bIsGameRunning'] = running
 
 
 def GetCurrentStep(playerinfo):

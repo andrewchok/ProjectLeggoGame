@@ -2,22 +2,18 @@
   "files": {
     "main.py": [
       {
-        "id": "18fd951a-4045-4fa2-bedc-4d4bd51a6039",
-        "line": 31,
-        "version": 5635,
-        "index": 721
-      },
+        "id": "552b2142-fd10-4682-8874-0b3bff7ca510",
+        "line": 27,
+        "version": 5889,
+        "index": 642
+      }
+    ],
+    "steppingstonegame.py": [
       {
-        "id": "a7358c80-3bce-467b-bd42-0d5635a5d114",
-        "line": 42,
-        "version": 5636,
-        "index": 1044
-      },
-      {
-        "id": "af3e68fa-b51a-4584-89ac-1822322713ec",
-        "line": 46,
-        "version": 5636,
-        "index": 1219
+        "id": "78dba0ca-b92c-4db4-a833-672e284fb295",
+        "line": 37,
+        "version": 2279,
+        "index": 558
       }
     ]
   }
