@@ -295,6 +295,9 @@ async def on_message(message):
                 elif result == steppingstonegame.StepMessage.Win:
                     await message.channel.send(dbutils.MentionAuthor(author) + ' you made it to the other side!')
                     PrintLog(dbutils.MentionAuthor(author) + ' you made it to the other side!')
+                elif result == steppingstonegame.StepMessage.NoStep:
+                    await message.channel.send(dbutils.MentionAuthor(author) + ' that step is broken!')
+                    PrintLog(dbutils.MentionAuthor(author) + ' that step is broken!')
                 else:
                     await message.channel.send(
                         dbutils.MentionAuthor(author) + ' INVALID!')

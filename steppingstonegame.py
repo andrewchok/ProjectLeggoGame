@@ -17,7 +17,8 @@ class StepMessage(enum.Enum):
 # game settings
 maxSteps = 16
 maxPlayersOnStep = 2
-gameTime = 15
+stepOverhead = 1 #currently just 1 to accommodate bIsBroken
+gameTime = 5
 gameName = 'SteppingStoneGame'
 
 
@@ -85,19 +86,19 @@ def StartGame():
     random.seed()
     x = random.randint(1, 100)
 
-    # first step
+    # first step -- ['type of step', bIsBroken]
     if (x > 50):
-        db[gameName] = [['right']]
+        db[gameName] = [['right', False]]
     else:
-        db[gameName] = [['left']]
+        db[gameName] = [['left', False]]
 
     # rest of steps
     while len(db[gameName]) < maxSteps:
         x = random.randint(1, 100)
         if (x > 50):
-            db[gameName].append(['right'])
+            db[gameName].append(['right', False]) # ['type of step', bIsBroken]
         else:
-            db[gameName].append(['left'])
+            db[gameName].append(['left', False]) # ['type of step', bIsBroken]
 
     # init all players for the game
     for player in db.keys():
@@ -112,6 +113,8 @@ def Step(authorId, bIsRight):
     steps = db[gameName]
     playerInfo = db[authorId]
     currentStep = playerInfo['current_step']
+    index_bIsBroken = 1
+    
 
     AddToGameStatus(authorId)
 
@@ -122,7 +125,7 @@ def Step(authorId, bIsRight):
         return StepMessage.Win
       
     # check if step can hold player
-    if len(steps[currentStep]) > (maxPlayersOnStep):
+    if len(steps[currentStep]) > (maxPlayersOnStep + stepOverhead):
         return StepMessage.Fail
 
     # remove instance of player from previous step
@@ -149,6 +152,10 @@ def Step(authorId, bIsRight):
         return StepMessage.Success
 
     else:
-        db[authorId]['is_alive'] = False
-        return StepMessage.Fell
+        if not db[gameName][currentStep][index_bIsBroken]:
+            db[authorId]['is_alive'] = False
+            db[gameName][currentStep][index_bIsBroken] = True;
+            return StepMessage.Fell
+        else:
+            return StepMessage.NoStep
 
