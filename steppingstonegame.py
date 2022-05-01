@@ -11,10 +11,11 @@ class StepMessage(enum.Enum):
     Fail = 1
     Fell = 2
     Win = 3
+    NoStep = 4
 
 
 # game settings
-maxSteps = 32
+maxSteps = 16
 maxPlayersOnStep = 2
 gameTime = 15
 gameName = 'SteppingStoneGame'
@@ -114,6 +115,12 @@ def Step(authorId, bIsRight):
 
     AddToGameStatus(authorId)
 
+    if currentStep >= maxSteps:
+        if authorId in steps[currentStep - 1]:
+            steps[currentStep - 1].remove(authorId)
+            playerInfo['current_step'] = '*Winner*'
+        return StepMessage.Win
+      
     # check if step can hold player
     if len(steps[currentStep]) > (maxPlayersOnStep):
         return StepMessage.Fail
@@ -122,9 +129,6 @@ def Step(authorId, bIsRight):
     if not ((currentStep - 1) < 0):
         if authorId in steps[currentStep - 1]:
             steps[currentStep - 1].remove(authorId)
-
-    if currentStep >= maxSteps:
-        return StepMessage.Win
 
     if (steps[currentStep][0] == 'left' and not bIsRight) or (steps[currentStep][0] == 'right' and bIsRight):
         # add instance of player to current step
