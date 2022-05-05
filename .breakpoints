@@ -1,19 +1,11 @@
 {
   "files": {
-    "main.py": [
-      {
-        "id": "552b2142-fd10-4682-8874-0b3bff7ca510",
-        "line": 34,
-        "version": 6311,
-        "index": 841
-      }
-    ],
     "steppingstonegame.py": [
       {
-        "id": "78dba0ca-b92c-4db4-a833-672e284fb295",
-        "line": 37,
-        "version": 2279,
-        "index": 558
+        "id": "cbdda760-a9d4-4ce4-8bda-d6c677e31162",
+        "line": 223,
+        "version": 4439,
+        "index": 6189
       }
     ]
   }

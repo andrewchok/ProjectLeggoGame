@@ -3,6 +3,7 @@ import discord
 import os
 import dbutils
 import steppingstonegame
+import usercommands
 from replit import db
 
 DEBUG_MODE = False
@@ -14,6 +15,7 @@ startGameTime = datetime.datetime.now()
 endGameTime = datetime.datetime.now()
 gameCooldown = datetime.timedelta(minutes=steppingstonegame.gameTime)
 DateTimeAdjust = datetime.timedelta(hours=4)
+pushCooldown = datetime.timedelta(minutes=1)
 
 
 # Util functions
@@ -162,10 +164,12 @@ async def on_message(message):
                 del db[data]
             return
 
-        if CheckCmd(messageContent, 'current_highscore_reset'):
+        if CheckCmd(messageContent, 'current_scores_reset'):
             for data in db.keys():
                 if 'highscore_current' in data.keys():
                     db[data]['highscore_current'] = 0
+                if 'wins_current' in data.keys():
+                    db[data]['wins_current'] = 0
             return
 
         if CheckCmd(messageContent, 'force_startgame'):
@@ -257,58 +261,8 @@ async def on_message(message):
         return
 
     if CheckCmd(messageContent, 'left') or CheckCmd(messageContent, 'right'):
-        if steppingstonegame.CheckGame():
-            if db[authorId]['is_alive']:
-                if CheckCmd(messageContent, 'left'):
-                    result = steppingstonegame.Step(authorId, False)
-                else:
-                    result = steppingstonegame.Step(authorId, True)
-
-                if result == steppingstonegame.StepMessage.Success:
-                    await message.channel.send(
-                        dbutils.MentionAuthor(author) + ' moved to step ' +
-                        str(db[authorId]['current_step']) + '!')
-                    PrintLog(
-                        dbutils.MentionAuthor(author) + ' moved to step ' +
-                        str(db[authorId]['current_step']) + '!')
-                elif result == steppingstonegame.StepMessage.Fail:
-                    occupyingPlayers = ''
-                    currentStep = db[authorId]['current_step']
-
-                    for player in db['SteppingStoneGame'][currentStep]:
-                        if (player != 'left') and (player != 'right'):
-                            occupyingPlayers += (dbutils.MentionId(player) +
-                                                 ' ')
-
-                    await message.channel.send(
-                        dbutils.MentionAuthor(author) +
-                        ' not enough space to go there. Occupied by ' +
-                        occupyingPlayers)
-                    PrintLog(
-                        dbutils.MentionAuthor(author) +
-                        ' not enough space to go there. Occupied by ' +
-                        occupyingPlayers)
-                elif result == steppingstonegame.StepMessage.Fell:
-                    await message.channel.send(
-                        dbutils.MentionAuthor(author) + ' you fell!')
-                    PrintLog(dbutils.MentionAuthor(author) + ' you fell!')
-                elif result == steppingstonegame.StepMessage.Win:
-                    await message.channel.send(dbutils.MentionAuthor(author) + ' you made it to the other side!')
-                    PrintLog(dbutils.MentionAuthor(author) + ' you made it to the other side!')
-                elif result == steppingstonegame.StepMessage.NoStep:
-                    await message.channel.send(dbutils.MentionAuthor(author) + ' that step is broken!')
-                    PrintLog(dbutils.MentionAuthor(author) + ' that step is broken!')
-                else:
-                    await message.channel.send(
-                        dbutils.MentionAuthor(author) + ' INVALID!')
-                    PrintLog(dbutils.MentionAuthor(author) + ' INVALID!')
-            else:
-                await message.channel.send(
-                    dbutils.MentionAuthor(author) +
-                    ' you are no longer in the game!')
-                PrintLog(
-                    dbutils.MentionAuthor(author) +
-                    ' you are no longer in the game!')
+        bIsRight = CheckCmd(messageContent, 'right')
+        await usercommands.Command_Step(message, bIsRight)
         return
 
     if CheckCmd(messageContent, 'highscore'):
@@ -324,12 +278,85 @@ async def on_message(message):
             str(dbutils.GetHighscoreLifetime(authorId)) + '**')
         return
 
+    if CheckCmd(messageContent, 'wins'):
+        await message.channel.send(
+            dbutils.MentionAuthor(author) + ' your current wins is: **' +
+            str(dbutils.GetWinsCurrent(authorId)) +
+            '**, your lifetime wins is: **' +
+            str(dbutils.GetWinsLifetime(authorId)) + '**')
+        PrintLog(
+            dbutils.MentionAuthor(author) + ' your current wins is: **' +
+            str(dbutils.GetWinsCurrent(authorId)) +
+            '**, your lifetime wins is: **' +
+            str(dbutils.GetWinsLifetime(authorId)) + '**')
+        return
+
+    if CheckCmd(messageContent, 'push'):
+        currentPushCooldownTime = datetime.datetime.strptime(
+            db[authorId]['push_cooldown_time'], '%Y-%m-%d %H:%M:%S.%f')
+      
+        if currentTime >= currentPushCooldownTime:
+            pushOutput = steppingstonegame.Push(authorId)
+
+            pusheeId = pushOutput[0]
+            pushMessage = pushOutput[1]
+            stepType = pushOutput[2]
+
+            if pushMessage == steppingstonegame.PushMessage.Invalid:
+                PrintLog('Error: Push was Invalid, early out')
+                return
+              
+            # not valid  push
+            if pushMessage == steppingstonegame.PushMessage.DoNothing:
+                await message.channel.send(
+                    dbutils.MentionId(authorId) + ' nobody to push!')
+                PrintLog(dbutils.MentionId(authorId) + ' nobody to push!')
+                return
+            
+            currentPushCooldownTime = datetime.datetime.now() + pushCooldown
+            db[authorId]['push_cooldown_time'] = str(currentPushCooldownTime)
+          
+            if pushMessage == steppingstonegame.PushMessage.Fail:
+                await message.channel.send(
+                    dbutils.MentionId(authorId) + ' tried to push ' +
+                    dbutils.MentionId(pusheeId) + ' but failed!')
+                PrintLog(
+                    dbutils.MentionId(authorId) + ' tried to push ' +
+                    dbutils.MentionId(pusheeId) + ' but failed!')
+                return
+
+            bWasPushed = True
+            bPushedToBrokenStep = pushMessage == steppingstonegame.PushMessage.Fell
+
+            await message.channel.send(
+                dbutils.MentionId(authorId) + ' pushed ' +
+                dbutils.MentionId(pusheeId) + '!')
+            PrintLog(
+                dbutils.MentionId(authorId) + ' pushed ' +
+                dbutils.MentionId(pusheeId) + '!')
+
+            await usercommands.Command_Step(message, stepType == 'right',
+                                            pusheeId, bWasPushed,
+                                            bPushedToBrokenStep)
+
+        else:
+            elapsedTime = currentPushCooldownTime - currentTime
+            await message.channel.send(
+                dbutils.MentionId(authorId) + ' push on cooldown for: ' +
+                str(int((elapsedTime.seconds % 3600) / 60)) + ' min ' +
+                str(elapsedTime.seconds % 60) + ' sec')
+            PrintLog(
+                dbutils.MentionId(authorId) + ' push on cooldown for: ' +
+                str(int((elapsedTime.seconds % 3600) / 60)) + ' min ' +
+                str(elapsedTime.seconds % 60) + ' sec')
+        return
+
     # test cmd area
     if hasAuthority and CheckCmd(messageContent, 'test'):
         await message.channel.send('Hello ' + dbutils.MentionAuthor(author) +
                                    '!')
         return
-
+      
     #await message.channel.send('Command not found!')
 
 
