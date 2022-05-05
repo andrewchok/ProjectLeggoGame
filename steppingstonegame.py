@@ -161,8 +161,9 @@ def Step(authorId, bIsRight, bWasPushed=False, bPushedToBrokenStep=False):
 
         return StepMessage.Win
 
-    # check if step can hold player
-    if len(steps[currentStep]) > (maxPlayersOnStep + stepOverhead):
+    # check if step can hold player, ignore if being pushed
+    if len(steps[currentStep]) > (maxPlayersOnStep + stepOverhead) and (
+            not bPushedToBrokenStep):
         return StepMessage.Fail
 
     # remove instance of player from previous step
@@ -258,22 +259,32 @@ def Push(authorId):
                 output[index_PushMessage] = PushMessage.Fail
 
             return output
+
+        # if the step being pushed to has max ppl already, then pusher wants to eliminate pushee
+        if currentStep >= 0 and currentStep < len(steps):
+            if len(steps[currentStep]) > (maxPlayersOnStep + stepOverhead):
+                # do roll checks
+                if (RollChance()):
+                    output[index_PushMessage] = PushMessage.Fell
+                else:
+                    output[index_PushMessage] = PushMessage.Fail
+                return output
+
+        # push to a random step in front
+        randStepChoice = random.randint(1, 100)
+
+        if (randStepChoice > 50):  #right
+            output[index_StepType] = 'right'
+        else:  #left
+            output[index_StepType] = 'left'
+
+        # do roll checks
+        if (RollChance()):
+            output[index_PushMessage] = PushMessage.Success
         else:
-            # push to a random step in front
-            randStepChoice = random.randint(1, 100)
+            output[index_PushMessage] = PushMessage.Fail
 
-            if (randStepChoice > 50):  #right
-                output[index_StepType] = 'right'
-            else:  #left
-                output[index_StepType] = 'left'
-
-            # do roll checks
-            if (RollChance()):
-                output[index_PushMessage] = PushMessage.Success
-            else:
-                output[index_PushMessage] = PushMessage.Fail
-
-            return output
+        return output
 
     # fail safe return
     return output
