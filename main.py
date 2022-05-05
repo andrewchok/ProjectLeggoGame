@@ -351,6 +351,11 @@ async def on_message(message):
                 str(elapsedTime.seconds % 60) + ' sec')
         return
 
+    if CheckCmd(messageContent, 'help'):
+        await message.channel.send(
+                dbutils.MentionId(authorId) + ' look at the pinned messages for help!')
+        return 
+      
     # test cmd area
     if hasAuthority and CheckCmd(messageContent, 'test'):
         await message.channel.send('Hello ' + dbutils.MentionAuthor(author) +
