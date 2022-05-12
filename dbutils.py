@@ -2,8 +2,8 @@ import discord
 import datetime
 from replit import db
 
-# Current Register version: 0.5, add push cooldown time, 0.6 fix initializing push cooldown time
-registerVersion = 0.6
+# Current Register version: 0.8, add revive via phoenixdown
+registerVersion = 0.8
 
 
 def UpdateRegister(author):
@@ -51,6 +51,12 @@ def UpdateRegister(author):
     if 'push_cooldown_time' not in db[authorId].keys():
         db[authorId]['push_cooldown_time'] = str(datetime.datetime.now())
 
+    if 'push_cooldown_time' in db[authorId].keys():
+        db[authorId]['push_cooldown_time'] = str(datetime.datetime.now())
+    
+    if 'phoenixdown_cooldown_time' not in db[authorId].keys():
+        db[authorId]['phoenixdown_cooldown_time'] = str(datetime.datetime.now())
+
     return True
 
 
@@ -74,8 +80,10 @@ def InitRegister(authorId, authorName):
         # version 0.4
         'wins_lifetime': 0,
         'wins_current': 0,
-        # version 0.5, 0.6
-        'push_cooldown_time': ''
+        # version 0.5, 0.6, 0.7
+        'push_cooldown_time': str(datetime.datetime.now()),
+        # version 0.8
+        'phoenixdown_cooldown_time': str(datetime.datetime.now())
     }
     # remember to update the UpdateRegister() with new value
 

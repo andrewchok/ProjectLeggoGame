@@ -32,10 +32,10 @@ class PushMessage(enum.Enum):
 
 
 # game settings
-maxSteps = 16
+maxSteps = 10
 maxPlayersOnStep = 2
 stepOverhead = 1  #currently just 1 to accommodate bIsBroken
-gameTime = 5
+gameTime = 5  # time in minutes
 gameName = 'SteppingStoneGame'
 
 
@@ -156,8 +156,7 @@ def Step(authorId, bIsRight, bWasPushed=False, bPushedToBrokenStep=False):
             playerInfo['wins_current'] = playerInfo['wins_current'] + 1
 
             # update lifetime wins
-            if playerInfo['wins_current'] > playerInfo['wins_lifetime']:
-                playerInfo['wins_lifetime'] = playerInfo['wins_current']
+            playerInfo['wins_lifetime'] = playerInfo['wins_lifetime'] + 1
 
         return StepMessage.Win
 
@@ -251,7 +250,7 @@ def Push(authorId):
         output[index_PusheeId] = pusheeArr[randPusheeIndex]
 
         # if the step being pushed to has a broken step, then pusher wants to eliminate pushee
-        if not db[gameName][currentStep][index_bIsBroken]:
+        if db[gameName][currentStep][index_bIsBroken]:
             # do roll checks
             if (RollChance()):
                 output[index_PushMessage] = PushMessage.Fell

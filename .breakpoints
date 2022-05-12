@@ -1,11 +1,31 @@
 {
   "files": {
+    "main.py": [
+      {
+        "id": "676d88d0-7ad5-44e4-bdcd-18623042862d",
+        "line": 313,
+        "version": 7956,
+        "index": 11891
+      }
+    ],
     "steppingstonegame.py": [
       {
-        "id": "cbdda760-a9d4-4ce4-8bda-d6c677e31162",
-        "line": 239,
-        "version": 4500,
-        "index": 6451
+        "id": "96896d0f-b0b1-4043-9015-9db8fd3c9ca7",
+        "line": 214,
+        "version": 4644,
+        "index": 5650
+      },
+      {
+        "id": "a2e61234-f926-4791-a038-2bcf7a595dec",
+        "line": 237,
+        "version": 4644,
+        "index": 6356
+      },
+      {
+        "id": "24b23ca5-1fdc-4f86-9d99-fd8035cb28a8",
+        "line": 249,
+        "version": 4645,
+        "index": 6913
       }
     ]
   }

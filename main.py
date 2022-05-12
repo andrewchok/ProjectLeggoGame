@@ -1,14 +1,18 @@
+import requests
+import json
 import datetime
 import discord
 import os
 import dbutils
 import steppingstonegame
 import usercommands
+import random
 from replit import db
 
 DEBUG_MODE = False
 client = discord.Client()
 botToken = os.environ['TOKEN']
+tenorToken = os.environ['TENOR_TOKEN']
 adminId = os.environ['AdminId']
 cmdPrefix = '$'
 startGameTime = datetime.datetime.now()
@@ -16,6 +20,7 @@ endGameTime = datetime.datetime.now()
 gameCooldown = datetime.timedelta(minutes=steppingstonegame.gameTime)
 DateTimeAdjust = datetime.timedelta(hours=4)
 pushCooldown = datetime.timedelta(minutes=1)
+phoenixdownCooldown = datetime.timedelta(minutes=60)
 
 
 # Util functions
@@ -165,11 +170,13 @@ async def on_message(message):
             return
 
         if CheckCmd(messageContent, 'current_scores_reset'):
+            PrintLog('Resetting current highscores and wins...')
             for data in db.keys():
-                if 'highscore_current' in data.keys():
+                if 'highscore_current' in db[data]:
                     db[data]['highscore_current'] = 0
-                if 'wins_current' in data.keys():
+                if 'wins_current' in db[data]:
                     db[data]['wins_current'] = 0
+            PrintLog('Resetting done!')
             return
 
         if CheckCmd(messageContent, 'force_startgame'):
@@ -260,6 +267,21 @@ async def on_message(message):
                      str(elapsedTime.seconds % 60) + ' sec')
         return
 
+    if CheckCmd(messageContent, 'gametime'):
+        if currentTime >= startGameTime:
+            await message.channel.send('Game in session for: 0 min 0 sec')
+            PrintLog('Game in session for: 0 min 0 sec')
+        else:
+            elapsedTime = startGameTime - currentTime
+            await message.channel.send('Game in session for: ' +
+                                       str(int((elapsedTime.seconds % 3600) /
+                                               60)) + ' min ' +
+                                       str(elapsedTime.seconds % 60) + ' sec')
+            PrintLog('Game in session for: ' +
+                     str(int((elapsedTime.seconds % 3600) / 60)) + ' min ' +
+                     str(elapsedTime.seconds % 60) + ' sec')
+        return
+
     if CheckCmd(messageContent, 'left') or CheckCmd(messageContent, 'right'):
         bIsRight = CheckCmd(messageContent, 'right')
         await usercommands.Command_Step(message, bIsRight)
@@ -294,7 +316,7 @@ async def on_message(message):
     if CheckCmd(messageContent, 'push'):
         currentPushCooldownTime = datetime.datetime.strptime(
             db[authorId]['push_cooldown_time'], '%Y-%m-%d %H:%M:%S.%f')
-      
+
         if currentTime >= currentPushCooldownTime:
             pushOutput = steppingstonegame.Push(authorId)
 
@@ -305,17 +327,17 @@ async def on_message(message):
             if pushMessage == steppingstonegame.PushMessage.Invalid:
                 PrintLog('Error: Push was Invalid, early out')
                 return
-              
+
             # not valid  push
             if pushMessage == steppingstonegame.PushMessage.DoNothing:
                 await message.channel.send(
                     dbutils.MentionId(authorId) + ' nobody to push!')
                 PrintLog(dbutils.MentionId(authorId) + ' nobody to push!')
                 return
-            
+
             currentPushCooldownTime = datetime.datetime.now() + pushCooldown
             db[authorId]['push_cooldown_time'] = str(currentPushCooldownTime)
-          
+
             if pushMessage == steppingstonegame.PushMessage.Fail:
                 await message.channel.send(
                     dbutils.MentionId(authorId) + ' tried to push ' +
@@ -328,12 +350,19 @@ async def on_message(message):
             bWasPushed = True
             bPushedToBrokenStep = pushMessage == steppingstonegame.PushMessage.Fell
 
-            await message.channel.send(
-                dbutils.MentionId(authorId) + ' pushed ' +
-                dbutils.MentionId(pusheeId) + '!')
-            PrintLog(
-                dbutils.MentionId(authorId) + ' pushed ' +
-                dbutils.MentionId(pusheeId) + '!')
+            pushMessageString = dbutils.MentionId(authorId) + ' pushed ' + dbutils.MentionId(pusheeId)
+
+            if pushMessage == steppingstonegame.PushMessage.Fell:
+                pushMessageString += ' to their death!'
+
+            if pushMessage == steppingstonegame.PushMessage.Success:
+                if stepType == 'right':
+                    pushMessageString += ' to the right!'
+                else:
+                    pushMessageString += ' to the left!'
+          
+            await message.channel.send(pushMessageString)
+            PrintLog(pushMessageString)
 
             await usercommands.Command_Step(message, stepType == 'right',
                                             pusheeId, bWasPushed,
@@ -351,17 +380,69 @@ async def on_message(message):
                 str(elapsedTime.seconds % 60) + ' sec')
         return
 
+    if CheckCmd(messageContent, 'phoenixdown'):
+        currentPhoenixdownCooldownTime = datetime.datetime.strptime(
+            db[authorId]['phoenixdown_cooldown_time'], '%Y-%m-%d %H:%M:%S.%f')
+        if db[authorId]['is_alive'] and currentTime >= currentPhoenixdownCooldownTime:
+            await message.channel.send(
+                dbutils.MentionId(authorId) +
+                ' you are still alive!')
+            PrintLog(
+                dbutils.MentionId(authorId) +
+                ' you are still alive!')
+        elif currentTime >= currentPhoenixdownCooldownTime:
+            db[authorId]['is_alive'] = True
+            db[authorId]['current_step'] = 0
+            currentPhoenixdownCooldownTime = datetime.datetime.now(
+            ) + phoenixdownCooldown
+            db[authorId]['phoenixdown_cooldown_time'] = str(
+                currentPhoenixdownCooldownTime)
+            await message.channel.send(
+                dbutils.MentionId(authorId) +
+                ' you used phoenix down to revive at the start!')
+            PrintLog(
+                dbutils.MentionId(authorId) +
+                ' you used phoenix down to revive at the start!')
+        else:
+            elapsedTime = currentPhoenixdownCooldownTime - currentTime
+            await message.channel.send(
+                dbutils.MentionId(authorId) +
+                ' phoenix down on cooldown for: ' +
+                str(int((elapsedTime.seconds % 3600) / 60)) + ' min ' +
+                str(elapsedTime.seconds % 60) + ' sec')
+            PrintLog(
+                dbutils.MentionId(authorId) +
+                ' phoenix down on cooldown for: ' +
+                str(int((elapsedTime.seconds % 3600) / 60)) + ' min ' +
+                str(elapsedTime.seconds % 60) + ' sec')
+
+        return
+
     if CheckCmd(messageContent, 'help'):
         await message.channel.send(
-                dbutils.MentionId(authorId) + ' look at the pinned messages for help!')
-        return 
-      
+            dbutils.MentionId(authorId) +
+            ' look at the pinned messages for help!')
+        return
+
+    if CheckCmd(messageContent, 'fixpushplease'):
+        if 'push_cooldown_time' in db[authorId].keys():
+            db[authorId]['push_cooldown_time'] = str(datetime.datetime.now() +
+                                                     pushCooldown)
+
     # test cmd area
     if hasAuthority and CheckCmd(messageContent, 'test'):
-        await message.channel.send('Hello ' + dbutils.MentionAuthor(author) +
-                                   '!')
+        #await message.channel.send('Hello ' + dbutils.MentionAuthor(author) +
+        #                          '!')
+        await message.channel.send('Current Winners:')
+        for player in db.keys():
+            if 'wins_current' in db[player]:
+                if db[player]['wins_current'] > 0:
+                    await message.channel.send(
+                        dbutils.MentionId(player) + ' [**' +
+                        str(db[player]['wins_current']) + '**]')
+
         return
-      
+
     #await message.channel.send('Command not found!')
 
 
