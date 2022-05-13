@@ -32,7 +32,7 @@ class PushMessage(enum.Enum):
 
 
 # game settings
-maxSteps = 10
+maxSteps = 16
 maxPlayersOnStep = 2
 stepOverhead = 1  #currently just 1 to accommodate bIsBroken
 gameTime = 5  # time in minutes
